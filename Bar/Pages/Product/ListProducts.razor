@@ -1,0 +1,59 @@
+﻿@page "/Product/ListProducts"
+@inject IProductAppService _service
+@inject NavigationManager _navigationManager
+@inject AuthenticationStateProvider _provider
+
+<br /><br />
+<MudText Typo="Typo.h5">Inventory</MudText>
+<br />
+<MudLink Variant="Variant.Filled" Color="Color.Primary" href="category/create/">Insert a new product</MudLink>
+<br />
+
+<MudTable Items="@products.Values" Hover="true" Breakpoint="Breakpoint.Sm">
+    <HeaderContent>
+        <MudTh>Product Name</MudTh>
+        <MudTh>Amount in Bar</MudTh>
+        <MudTh>Price</MudTh>
+        <MudTh></MudTh>
+        <MudTh></MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        @if(context.Amount > 0)
+        {
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Amount">@context.Amount</MudTd>
+            <MudTd DataLabel="Price">@(context.Price.ToString("N0"))</MudTd>
+            <MudTd><MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@($"category/edit/{context.Id}")">Edit</MudButton></MudTd>
+            <MudTd><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="()=>IncrementAsync(context.Id)"><MudIcon Icon="@Icons.Filled.ArrowUpward"></MudIcon></MudButton></MudTd>
+            <MudTd><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="()=>DecrementAsync(context.Id)"><MudIcon Icon="@Icons.Filled.ArrowDownward"></MudIcon></MudButton></MudTd>
+        }
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private Dictionary<int, ProductViewModel> products = new Dictionary<int, ProductViewModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _provider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
+        {
+            var uri = new Uri(_navigationManager.Uri);
+            _navigationManager.NavigateTo($"/identity/account/login?returnUrl={uri.LocalPath}", forceLoad: true);
+        }
+        products = (await _service.GetProductsAsync()).ToDictionary(x => x.Id);
+    }
+
+    private async Task IncrementAsync(int id)
+    {
+        products[id].Amount++;
+        await _service.UpdateProductAsync(products[id]);
+    }
+
+    private async Task DecrementAsync(int id)
+    {
+        products[id].Amount--;
+        await _service.UpdateProductAsync(products[id]);
+    }
+}

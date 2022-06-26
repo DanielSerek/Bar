@@ -1,0 +1,68 @@
+﻿@page "/User/ListUsers"
+@using Bar.DataAcess.Repository.IRepository
+@using Bar.Models
+@using Bar.Services
+@using Bar.ViewModels
+@inject IUserAppService _service
+@inject NavigationManager _navigationManager
+@inject AuthenticationStateProvider _provider
+
+<MudGrid>
+    <MudItem xs="12" sm="7">
+        <MudPaper Class="pa-4">
+            <MudForm >
+                <MudTextField Label="First Name" @bind-Value="User.FirstName" />
+                <MudTextField Label="Last Name" @bind-Value="User.LastName" />
+            </MudForm>
+        </MudPaper>
+        <MudPaper Class="pa-3">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" DisableElevation="true" OnClick="@(() => FindUsersAsync(User))">Filter</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<br />
+<br />
+<MudText Typo="Typo.h5">Users</MudText>
+<br />
+
+<MudTable Items="@Users.Take(10)" Hover="true" Breakpoint="Breakpoint.Sm">
+    <HeaderContent>
+        <MudTh>First Name</MudTh>
+        <MudTh>Last Name</MudTh>
+        <MudTh>Email</MudTh>
+        <MudTh>Credit</MudTh>
+        <MudTh></MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="FirstName">@context.FirstName</MudTd>
+        <MudTd DataLabel="LastName">@context.LastName</MudTd>
+        <MudTd DataLabel="Email">@context.Email</MudTd>
+        <MudTd DataLabel="Credit">@string.Format("{0:N0}", context.Credit)</MudTd>
+        <MudTd><MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@($"user/editcredit/{context.Id}")">Edit</MudButton></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    public UserViewModel User = new UserViewModel();
+    public IEnumerable<UserViewModel> Users { get; set; } = new List<UserViewModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _provider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
+        {
+            var uri = new Uri(_navigationManager.Uri);
+            _navigationManager.NavigateTo($"/identity/account/login?returnUrl={uri.LocalPath}", forceLoad: true);
+        }
+
+        Users = await _service.GetUsersAsync();
+    }
+
+    private async Task FindUsersAsync(UserViewModel user)
+    {
+        Users = await _service.FilterUsersAsync(user.FirstName, user.LastName);
+        StateHasChanged();
+    }
+}

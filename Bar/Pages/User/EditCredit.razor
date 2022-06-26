@@ -1,0 +1,51 @@
+﻿@page "/user/editcredit/{id}"
+@using Bar.DataAcess.Repository.IRepository
+@using Bar.ViewModels
+@using Bar.Services
+@inject IUserAppService _service
+@inject NavigationManager _navigationManager
+@inject AuthenticationStateProvider _provider
+
+<MudText Typo="Typo.h5">Edit Credit</MudText>
+
+<MudGrid>
+    <MudItem xs="12" sm="7">
+        <MudPaper Class="pa-4">
+            <MudForm>
+                    <MudTextField Label="First Name" @bind-Value="User.FirstName" Disabled="true"/>
+                    <MudTextField Label="Last Name" @bind-Value="User.LastName" Disabled="true"/>
+                    <MudNumericField Label="Credit" @bind-Value="User.Credit" Format="N0" Required="true" RequiredError="The number is required!"/>
+            </MudForm>   
+        </MudPaper>
+        <MudPaper Class="pa-4 mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" DisableElevation="true" OnClick="@(()=>EditAsync())">Update</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" DisableElevation="true" Href="category" Class="mx-2">Back to Index</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+
+    [Parameter]
+    public string Id { get; set; }
+    public UserViewModel User { get; set; } = new UserViewModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _provider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
+        {
+            var uri = new Uri(_navigationManager.Uri);
+            _navigationManager.NavigateTo($"/identity/account/login?returnUrl={uri.LocalPath}", forceLoad: true);
+        }
+
+        User = await _service.GetUserAsync(Id);
+        StateHasChanged();
+    }
+
+    private async Task EditAsync()
+    {
+        await _service.UpdateUserAsync(User);
+        _navigationManager.NavigateTo("/User/ListUsers");
+    }
+}
