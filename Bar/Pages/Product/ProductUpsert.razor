@@ -1,0 +1,67 @@
+﻿@page "/category/create"
+@page "/category/edit/{id:int}"
+@using Bar.DataAcess.Repository.IRepository
+@using Bar.Models
+@using Bar.Services
+@inject IProductAppService _service
+@inject NavigationManager _navigationManager
+@inject AuthenticationStateProvider _provider
+
+<br /><br />
+<MudText Typo="Typo.h5">@Title Product</MudText>
+<br />
+
+<MudGrid>
+    <MudItem xs="12" sm="7">
+        <MudPaper Class="pa-4">
+            <MudForm>
+                    <MudTextField Label="Name" @bind-Value="product.Name" Required="true" RequiredError="The product name is required!"/>
+                    <MudNumericField Label="Amount" @bind-Value="product.Amount" Required="true" RequiredError="The amount is required!"/>
+                    <MudNumericField Label="Price" @bind-Value="product.Price" Format="N0" Required="true" RequiredError="The price is required!"/>
+            </MudForm>   
+        </MudPaper>
+        <MudPaper Class="pa-4 mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" DisableElevation="true" OnClick="@(()=>UpsertProductAsync())">@Title</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" DisableElevation="true" Href="/Product/ListProducts" Class="mx-2">Back to Index</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+    public string Title { get; set; } = "Create";
+    private ProductViewModel product = new ProductViewModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _provider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
+        {
+            var uri = new Uri(_navigationManager.Uri);
+            _navigationManager.NavigateTo($"/identity/account/login?returnUrl={uri.LocalPath}", forceLoad: true);
+        }
+
+        if(Id != 0)
+        {
+            Title = "Update";
+            product = await _service.GetProductAsync(Id); 
+        }
+    }
+
+    private  async Task UpsertProductAsync()
+    {
+        if (product.Id==0)
+        {
+            //create
+            await _service.AddProductAsync(product);
+        }
+        else
+        {
+            //update
+            await _service.UpdateProductAsync(product);
+        }
+        _navigationManager.NavigateTo("/Product/ListProducts");
+    }
+}

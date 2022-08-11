@@ -1,0 +1,106 @@
+﻿@page "/Order/Summary"
+
+@using Bar.DataAcess.Repository.IRepository
+@inject IProductAppService _productService
+@inject IOrderAppService _orderService
+@inject IUserAppService _userService
+@inject NavigationManager _navigationManager
+@inject AuthenticationStateProvider _provider
+@inject UserManager<AppUser> _userManager
+@inject IDialogService _dialogService
+@inject AppData _appData
+
+@if (isAdmin)
+{
+    <MudGrid>
+        <MudItem xs="12" sm="7">
+            <MudPaper Class="pa-4">
+                <MudForm>
+                    <MudTextField Label="First Name" @bind-Value="User.FirstName" />
+                    <MudTextField Label="Last Name" @bind-Value="User.LastName" />
+                </MudForm>
+            </MudPaper>
+            <MudPaper Class="pa-3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" DisableElevation="true" OnClick="@(() => FindOrdersAsync(User))">Filter</MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@foreach (var order in orders)
+{
+    @if (order.Items != null ? order.Items.Count > 0 : false)
+    {
+        <div class="my-5">
+            <MudText Typo="Typo.h5">Order Date: @order.OrderDate.ToString("dd/MM/yyyy HH:mm"), Order Number: @order.Number, @(isAdmin? (order.User?.FirstName + " " + order.User?.LastName) : "")</MudText>
+            <MudTable Items="@order.Items" Hover="true" Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Product Name</MudTh>
+                    <MudTh>Unit Price</MudTh>
+                    <MudTh>Items in basket</MudTh>
+                    <MudTh>Price</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name">@products[context.ProductId].Name</MudTd>
+                    <MudTd DataLabel="ItemPrice">@string.Format("{0:N0}", products[context.ProductId].Price)</MudTd>
+                    <MudTd DataLabel="NumberOfItems">@context.Amount</MudTd>
+                    <MudTd DataLabel="Price">@(string.Format("{0:N0}", context.Amount * products[context.ProductId].Price))</MudTd>
+                </RowTemplate>
+            </MudTable>
+            <MudText Typo="Typo.h6">The total price of the order was: @(string.Format("{0:N0}",order.OrderTotal)) CZK</MudText>
+        </div>
+        <br />
+        <hr>
+        <br />
+    }
+}
+
+@code {
+    public UserViewModel User = new UserViewModel();
+    public IEnumerable<UserViewModel> Users { get; set; } = new List<UserViewModel>();
+    private Dictionary<int, ProductViewModel> products = new Dictionary<int, ProductViewModel>();
+    private OrderViewModel order = new OrderViewModel();
+    private IEnumerable<OrderViewModel> orders = new List<OrderViewModel>();
+    private List<OrderViewModel> filteredOrders = new List<OrderViewModel>();
+    private bool isAdmin = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _provider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
+        {
+            var uri = new Uri(_navigationManager.Uri);
+            _navigationManager.NavigateTo($"/identity/account/login?returnUrl={uri.LocalPath}", forceLoad: true);
+        }
+
+        var loadProducts = await _productService.GetProductsAsync();
+        products = loadProducts.ToDictionary(x => x.Id);
+
+        var user = await _userService.GetCurrentUserAsync();
+
+        if (await _userManager.IsInRoleAsync(user, "Admin"))
+        {
+            isAdmin = true;
+            orders = (await _orderService.GetAllOrders()).OrderByDescending(o => o.OrderDate).ToList();
+        }
+        else
+        {
+            orders = (await _orderService.GetUsersOrders(user)).OrderByDescending(o => o.OrderDate).ToList();;
+        }
+    }
+
+    private async Task FindOrdersAsync(UserViewModel user)
+    {
+        Users = await _userService.FilterUsersAsync(user.FirstName, user.LastName);
+
+        orders = await _orderService.GetAllOrders();
+        filteredOrders = new List<OrderViewModel>();
+        foreach (var userModel in Users)
+        {
+            filteredOrders.AddRange(orders.Where(o => o.UserId == userModel.Id));
+        }
+        orders = filteredOrders.OrderByDescending(o => o.OrderDate).ToList();
+
+        StateHasChanged();
+    }
+}

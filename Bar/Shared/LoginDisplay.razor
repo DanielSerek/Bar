@@ -1,0 +1,38 @@
+﻿@using Bar.Models
+@using Microsoft.AspNetCore.Identity
+@inject IUserAppService _userService
+@inject AppData _appData
+@implements IDisposable
+
+<AuthorizeView>
+    <Authorized>
+        <div style="display: flex; margin-left: auto;">
+            <a style="color:white" href="Identity/Account/Manage">Hello, @context.User.Identity?.Name! Your credit is: @_appData.Credit.ToString("N0") CZK</a>
+            <form method="post" action="Identity/Account/LogOut">
+                <button style="color:white" type="submit" class="nav-link btn btn-link">Log out</button>
+            </form>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <a href="Identity/Account/Register">Register</a>
+        <a href="Identity/Account/Login">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        _appData.Credit = await _userService.GetCurrentUsersCreditAsync();
+        _appData.OnChange += OnUpdate;
+    }
+
+    public void Dispose()
+    {
+        _appData.OnChange -= OnUpdate;
+    }
+
+    private async void OnUpdate()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+}

@@ -1,0 +1,19 @@
+﻿<MudNavMenu>
+    <AuthorizeView Roles="admin">
+        <MudNavLink Href="/Product/ListProducts/">Products</MudNavLink>
+        <MudNavLink Href="/User/ListUsers">Users</MudNavLink>
+    </AuthorizeView>
+    <MudNavLink Href="/Order/Index/">Make A New Order</MudNavLink>
+    <MudNavLink Href="/Order/Summary/">Orders Summary</MudNavLink>
+</MudNavMenu>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}
